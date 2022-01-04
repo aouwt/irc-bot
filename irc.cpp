@@ -13,10 +13,15 @@ int IRC::send (const char* what) {
 	char msg [IRC_MESSAGELEN + 2];
 	if (snprintf (msg, IRC_MESSAGELEN, "%s\n\r", what) == EOF)
 		return IRC_TOOLONG;
-	
+
 	socket.send (msg);
 }
 
 int IRC::set_nick (const char* nick) {
-	
+	if (strlen (nick) > IRC_NICKLEN)
+		return IRC_NICKTOOLONG;
+
+	char msg [IRC_MESSAGELEN + 2];
+	if (snprintf (msg, IRC_MESSAGELEN, "NICK %s\r\n", nick) == EOF)
+		return IRC_MSGTOOLONG;
 }
