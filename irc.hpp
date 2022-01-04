@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <Socks/ClientSocket.hpp> // https://github.com/j-Sans/Socks
+#include <ClientSocket.hpp> // https://github.com/j-Sans/Socks
 
 
 #define IRC_OK 0
@@ -9,10 +9,12 @@
 #define IRC_CANTCONNECT 4
 
 #define IRC_MESSAGELEN 512
+#define IRC_NICKLEN 9
+#define IRC_CHANNELLEN 50
 class IRC {
 	public:
-		typedef char nick_t [10];
-		typedef char channel_t [201];
+		typedef char nick_t [IRC_NICKLEN + 2];
+		typedef char channel_t [IRC_CHANNELLEN + 2];
 		
 		typedef struct {
 			char msg [IRC_MESSAGELEN + 2];
@@ -25,7 +27,7 @@ class IRC {
 		~IRC (void);
 		
 		int get_msg (Message* msg);
-		int send_msg (channel_t* channel, const char* msg);
+		int send_msg (const char* what, const channel_t );
 		
 		int join_channel (const char* ch);
 		int set_nick (const char* nick);
