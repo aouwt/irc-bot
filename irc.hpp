@@ -4,19 +4,26 @@
 
 #define IRC_OK	0	// No errors
 #define IRC_GENERAL	1	// General error
+
 #define IRC_NICKTOOLONG	10	// Too long nick
 #define IRC_MSGTOOLONG	11	// Too long message
 #define IRC_CHANTOOLONG	12	// Too long channel name
 #define IRC_TOOLONG	15	// Too long total message
 
 #define IRC_PACKETERR	20	// Malformed incoming packet
+#define IRC_DNSERR	21
+#define IRC_CANTCONNECT	22
+
 
 #define IRC_NOMESSAGE	0
-#define IRC_MESSAGE	1
+#define IRC_MESSAGE	-1
+
+
 
 #define IRC_MESSAGELEN	512
 #define IRC_NICKLEN	9
 #define IRC_CHANNELLEN	50
+#define IRC_BUFFERLEN	IRC_MESSAGELEN * 2
 class IRC {
 	public:
 		typedef char nick_t [IRC_NICKLEN + 2];
@@ -41,8 +48,12 @@ class IRC {
 		int is_connected (void);
 	
 	private:
+		struct {
+			char dat [IRC_BUFFERLEN];
+			size_t 
 		int err = 0;
 		int sockfd = 0;
 		
 		int _getcmd (char* msg);
+		int _send (const char* what);
 };

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netdb.h>
 
 
 bool startswith (const char *str, const char *search) {
@@ -36,7 +37,7 @@ IRC::IRC (const char* domain, unsigned int port, const char* name) {
 		return;
 	}
 	
-	addr -> ai_addr.sin_port = htons (port);
+	((struct sockaddr_in*) addr -> ai_addr) -> sin_port = htons (port);
 	if (connect (sockfd, addr -> ai_addr, addr -> ai_addrlen)) {
 		err = IRC_CANTCONNECT;
 		return;
@@ -44,50 +45,78 @@ IRC::IRC (const char* domain, unsigned int port, const char* name) {
 	
 	
 	
-	
-	
 	char msg [IRC_MESSAGELEN + 2];
-	if (snprintf (msg, IRC_MESSAGELEN, "USER %s %s %s %s\r\n", name, name, domain, name) == EOF) {
+	if (snprintf (msg, IRC_MESSAGELEN, "USER %s %s %s %s", name, name, domain, name) == EOF) {
 		err = IRC_TOOLONG;
 		return;
 	}
+	_send (msg);
 }
+
+
+
+
+int IRC::_send (const char* what) {
+	int sent = 0;
+	int len = strlen (what);
+	do {
+		sent = send (sockfd, what + sent, len - sent, 0);
+		if (sent < 0)
+			return IRC_GENERAL;
+	} while (sent < len);
+	
+	send (sockfd, "\r\n", 2, 0);
+	return IRC_OK;
+}
+
+
+
+
 
 int IRC::set_nick (const char* nick) {
 	if (strlen (nick) > IRC_NICKLEN)
 		return IRC_NICKTOOLONG;
 
 	char msg [IRC_MESSAGELEN + 2];
-	if (snprintf (msg, IRC_MESSAGELEN, "NICK %s\r\n", nick) == EOF)
+	if (snprintf (msg, IRC_MESSAGELEN, "NICK %s", nick) == EOF)
 		return IRC_TOOLONG;
 
-	socket.send (msg);
+	_send (msg);
 	return IRC_OK;
 }
+
+
+
 
 int IRC::send_msg (const char* what, const channel_t where) {
 	if (strlen (where) > IRC_CHANNELLEN)
 		return IRC_CHANTOOLONG;
 
 	char msg [IRC_MESSAGELEN + 2];
-	if (snprintf (msg, IRC_MESSAGELEN, "PRIVMSG %s :%s\r\n", where, what) == EOF)
+	if (snprintf (msg, IRC_MESSAGELEN, "PRIVMSG %s :%s", where, what) == EOF)
 		return IRC_TOOLONG;
 
-	socket.send (msg);
+	_send (msg);
 	return IRC_OK;
 }
+
+
+
 
 int IRC::join_chan (const char* ch) {
 	if (strlen (ch) > IRC_CHANNELLEN)
 		return IRC_CHANTOOLONG;
 
 	char msg [IRC_MESSAGELEN + 2];
-	if (snprintf (msg, IRC_MESSAGELEN, "JOIN %s\r\n", ch) == EOF)
+	if (snprintf (msg, IRC_MESSAGELEN, "JOIN %s", ch) == EOF)
 		return IRC_TOOLONG;
 
-	socket.send (msg);
+	_send (msg);
 	return IRC_OK;
 }
+
+
+
 
 int IRC::_getcmd (char* msg) {
 	size_t where = 0;
@@ -105,22 +134,17 @@ int IRC::_getcmd (char* msg) {
 	const char *s = CurBuf.c_str ();
 	CurBuf.erase (0, where + 2);
 
+	int bytes = recv
+
 	if (sscanf (s, ":%510[^\r]s\r\n", msg) == EOF)
 		return IRC_PACKETERR;
 	
 	return IRC_MESSAGE;
 }
 
-int IRC::send (const char* what) {
-	int sent = 0;
-	int len = strlen (what) + 1;
-	do {
-		sent = send (sockfd, what + sent, len - sent, 0);
-		if (sent < 0)
-			return IRC_GENERAL;
-	} while (sent < len);
-	return IRC_OK;
-}
+
+
+
 
 int IRC::get_msg (IRC::Message *msg) {
 	char str [IRC_MESSAGELEN];
@@ -131,7 +155,7 @@ retry:
 		return erm;
 	
 	if (startswith (str, "PING :"))
-		socket.send ("PONG\r\n");
+		_send ("PONG");
 	else
 	if (startswith (str, "NOTICE AUTH :"))
 		goto retry;
