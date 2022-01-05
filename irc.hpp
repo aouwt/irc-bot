@@ -35,6 +35,7 @@ class IRC {
 			//nick_t from;
 			//channel_t* channel;
 		} Message;
+		int err = 0;
 		
 		IRC (const char* domain, unsigned int port, const char* name);
 		IRC (const char* domain, const char* name) { IRC (domain, 6667, name); };
@@ -50,7 +51,6 @@ class IRC {
 	
 	private:
 		std::string CurBuf;
-		int err = 0;
 		int sockfd = 0;
 		
 		int _getcmd (char* msg);

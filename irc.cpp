@@ -1,4 +1,5 @@
 #include "irc.hpp"
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,6 +23,7 @@ IRC::~IRC (void) {}
 
 
 IRC::IRC (const char* domain, unsigned int port, const char* name) {
+	CurBuf = "";
 	if (strlen (name) > IRC_NICKLEN) {
 		err = IRC_NICKTOOLONG;
 		return;
@@ -39,17 +41,22 @@ IRC::IRC (const char* domain, unsigned int port, const char* name) {
 		err = IRC_CANTCONNECT;
 		return;
 	}
-	
+
+	if (fcntl (sockfd, F_SETFL, O_NONBLOCK)) {
+		err = IRC_GENERAL;
+		return;
+	}
+
 	((struct sockaddr_in*) addr -> ai_addr) -> sin_port = htons (port);
 	if (connect (sockfd, addr -> ai_addr, addr -> ai_addrlen)) {
 		err = IRC_CANTCONNECT;
 		return;
 	}
-	
-	
+
+	freeaddrinfo (addr);
 	
 	char msg [IRC_MESSAGELEN + 2];
-	if (snprintf (msg, IRC_MESSAGELEN, "USER %s %s %s %s", name, name, domain, name) == EOF) {
+	if (snprintf (msg, IRC_MESSAGELEN, "USER %s %s %s %s\r\n", name, name, domain, name) == EOF) {
 		err = IRC_TOOLONG;
 		return;
 	}
@@ -68,7 +75,6 @@ int IRC::_send (const char* what) {
 			return IRC_GENERAL;
 	} while (sent < len);
 	
-	send (sockfd, "\r\n", 2, 0);
 	return IRC_OK;
 }
 
@@ -81,11 +87,10 @@ int IRC::set_nick (const char* nick) {
 		return IRC_NICKTOOLONG;
 
 	char msg [IRC_MESSAGELEN + 2];
-	if (snprintf (msg, IRC_MESSAGELEN, "NICK %s", nick) == EOF)
+	if (snprintf (msg, IRC_MESSAGELEN, "NICK %s\r\n", nick) == EOF)
 		return IRC_TOOLONG;
 
-	_send (msg);
-	return IRC_OK;
+	return _send (msg);
 }
 
 
@@ -96,11 +101,10 @@ int IRC::send_msg (const char* what, const channel_t where) {
 		return IRC_CHANTOOLONG;
 
 	char msg [IRC_MESSAGELEN + 2];
-	if (snprintf (msg, IRC_MESSAGELEN, "PRIVMSG %s :%s", where, what) == EOF)
+	if (snprintf (msg, IRC_MESSAGELEN, "PRIVMSG %s :%s\r\n", where, what) == EOF)
 		return IRC_TOOLONG;
 
-	_send (msg);
-	return IRC_OK;
+	return _send (msg);
 }
 
 
@@ -111,17 +115,18 @@ int IRC::join_chan (const char* ch) {
 		return IRC_CHANTOOLONG;
 
 	char msg [IRC_MESSAGELEN + 2];
-	if (snprintf (msg, IRC_MESSAGELEN, "JOIN %s", ch) == EOF)
+	if (snprintf (msg, IRC_MESSAGELEN, "JOIN %s\r\n", ch) == EOF)
 		return IRC_TOOLONG;
 
-	_send (msg);
-	return IRC_OK;
+	return _send (msg);
 }
 
 
 void IRC::_get (void) {
 	char buf [IRC_BUFFERLEN];
 	ssize_t r = recv (sockfd, buf, sizeof (buf), 0);
+	if (r <= 0)
+		return;
 	buf [r + 1] = '\0';
 	std::string s (buf);
 	CurBuf += s;
@@ -131,11 +136,11 @@ void IRC::_get (void) {
 
 
 int IRC::_getcmd (char* msg) {
-	size_t where = 0;
+	int where = 0;
 	
 	_get ();
 
-	if ((where = CurBuf.find ("\r\n")) == 0) {
+	if ((where = CurBuf.find ("\r\n")) == -1) {
 		msg[0] = '\0';
 		return IRC_NOMESSAGE;
 	}
@@ -144,7 +149,7 @@ int IRC::_getcmd (char* msg) {
 	const char *s = CurBuf.c_str ();
 	CurBuf.erase (0, where + 2);
 
-	if (sscanf (s, ":%510[^\r]s\r\n", msg) == EOF)
+	if (sscanf (s, "%510[^\r]\r\n", msg) == EOF)
 		return IRC_PACKETERR;
 	
 	return IRC_MESSAGE;
@@ -163,7 +168,7 @@ retry:
 		return erm;
 	
 	if (startswith (str, "PING :"))
-		_send ("PONG");
+		return _send ("PONG\r\n");
 	else
 	if (startswith (str, "NOTICE AUTH :"))
 		goto retry;
