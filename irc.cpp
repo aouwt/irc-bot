@@ -1,5 +1,8 @@
 #include "irc.hpp"
+#include <netinet/in.h>
+#include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <time.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -116,15 +119,22 @@ int IRC::join_chan (const char* ch) {
 }
 
 
+void IRC::_get (void) {
+	char buf [IRC_BUFFERLEN];
+	ssize_t r = recv (sockfd, buf, sizeof (buf), 0);
+	buf [r + 1] = '\0';
+	std::string s (buf);
+	CurBuf += s;
+}
+
+
 
 
 int IRC::_getcmd (char* msg) {
 	size_t where = 0;
 	
-	try {
-		CurBuf += socket.receive ();
-	} catch (...) {}
-	
+	_get ();
+
 	if ((where = CurBuf.find ("\r\n")) == 0) {
 		msg[0] = '\0';
 		return IRC_NOMESSAGE;
@@ -133,8 +143,6 @@ int IRC::_getcmd (char* msg) {
 	
 	const char *s = CurBuf.c_str ();
 	CurBuf.erase (0, where + 2);
-
-	int bytes = recv
 
 	if (sscanf (s, ":%510[^\r]s\r\n", msg) == EOF)
 		return IRC_PACKETERR;

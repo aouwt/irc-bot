@@ -1,5 +1,6 @@
+#include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
+#include <string>
 
 
 #define IRC_OK	0	// No errors
@@ -48,12 +49,11 @@ class IRC {
 		int is_connected (void);
 	
 	private:
-		struct {
-			char dat [IRC_BUFFERLEN];
-			size_t 
+		std::string CurBuf;
 		int err = 0;
 		int sockfd = 0;
 		
 		int _getcmd (char* msg);
 		int _send (const char* what);
+		void _get (void);
 };
