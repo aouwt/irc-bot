@@ -42,7 +42,7 @@ IRC::IRC (const char* domain, unsigned int port, const char* name) {
 		return;
 	}
 
-	if (fcntl (sockfd, F_SETFL, O_NONBLOCK)) {
+		if (fcntl (sockfd, F_SETFL, O_NONBLOCK)) {
 		err = IRC_GENERAL;
 		return;
 	}
@@ -65,15 +65,14 @@ IRC::IRC (const char* domain, unsigned int port, const char* name) {
 
 
 
-
 int IRC::_send (const char* what) {
-	int sent = 0;
+	int sent = 0; int erc;
 	int len = strlen (what);
 	do {
 		puts (what + sent);
-		sent = send (sockfd, what + sent, len - sent, 0);
-		if (sent < 0)
-			return IRC_GENERAL;
+		erc = send (sockfd, what + sent, len - sent, 0);
+		if (erc > 0)
+			sent += erc;
 	} while (sent < len);
 	
 	return IRC_OK;
