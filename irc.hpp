@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include <Socks/ClientSocket.hpp> // https://github.com/j-Sans/Socks
 
 
 #define IRC_OK	0	// No errors
@@ -42,9 +41,8 @@ class IRC {
 		int is_connected (void);
 	
 	private:
-		ClientSocket socket;
 		int err = 0;
-		std::string CurBuf;
+		int sockfd = 0;
 		
 		int _getcmd (char* msg);
 };

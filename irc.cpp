@@ -2,7 +2,8 @@
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
-#include <Socks/ClientSocket.hpp>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 
 bool startswith (const char *str, const char *search) {
@@ -17,20 +18,39 @@ IRC::~IRC (void) {}
 
 
 IRC::IRC (const char* domain, unsigned int port, const char* name) {
-	socket.setSocket (domain, port);
-	
 	if (strlen (name) > IRC_NICKLEN) {
 		err = IRC_NICKTOOLONG;
 		return;
 	}
+	
+	
+	struct addrinfo *addr;
+	if (getaddrinfo (domain, NULL, NULL, &addr)) {
+		err = IRC_DNSERR;
+		return;
+	}
+	
+	sockfd = socket (addr -> ai_family, addr -> ai_socktype, addr -> ai_protocol);
+	if (sockfd == -1) {
+		err = IRC_CANTCONNECT;
+		return;
+	}
+	
+	addr -> ai_addr.sin_port = htons (port);
+	if (connect (sockfd, addr -> ai_addr, addr -> ai_addrlen)) {
+		err = IRC_CANTCONNECT;
+		return;
+	}
+	
+	
+	
+	
 	
 	char msg [IRC_MESSAGELEN + 2];
 	if (snprintf (msg, IRC_MESSAGELEN, "USER %s %s %s %s\r\n", name, name, domain, name) == EOF) {
 		err = IRC_TOOLONG;
 		return;
 	}
-	
-	socket.send (msg);
 }
 
 int IRC::set_nick (const char* nick) {
@@ -72,7 +92,9 @@ int IRC::join_chan (const char* ch) {
 int IRC::_getcmd (char* msg) {
 	size_t where = 0;
 	
-	CurBuf += socket.receive ();
+	try {
+		CurBuf += socket.receive ();
+	} catch (...) {}
 	
 	if ((where = CurBuf.find ("\r\n")) == 0) {
 		msg[0] = '\0';
@@ -87,6 +109,17 @@ int IRC::_getcmd (char* msg) {
 		return IRC_PACKETERR;
 	
 	return IRC_MESSAGE;
+}
+
+int IRC::send (const char* what) {
+	int sent = 0;
+	int len = strlen (what) + 1;
+	do {
+		sent = send (sockfd, what + sent, len - sent, 0);
+		if (sent < 0)
+			return IRC_GENERAL;
+	} while (sent < len);
+	return IRC_OK;
 }
 
 int IRC::get_msg (IRC::Message *msg) {
@@ -113,7 +146,7 @@ retry:
 		//	return IRC_PACKETERR;
 		//if (strstr (str, "duck") != NULL)
 		//	send_msg ("quack", "#b");
-		send_msg (str, "#b");
+		puts (str);
 	}
 	
 	return IRC_MESSAGE;
