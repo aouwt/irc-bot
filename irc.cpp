@@ -70,6 +70,7 @@ int IRC::_send (const char* what) {
 	int sent = 0;
 	int len = strlen (what);
 	do {
+		puts (what + sent);
 		sent = send (sockfd, what + sent, len - sent, 0);
 		if (sent < 0)
 			return IRC_GENERAL;
@@ -130,6 +131,7 @@ void IRC::_get (void) {
 	buf [r + 1] = '\0';
 	std::string s (buf);
 	CurBuf += s;
+	puts (CurBuf.c_str ());
 }
 
 

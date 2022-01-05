@@ -18,7 +18,7 @@ int main () {
 		//sprintf (thing, "%d", er);
 		//if (er != IRC_NOMESSAGE)
 		//	c.send_msg (thing, "#b");
-		printf ("%i\n", er);
+//		printf ("%i\n", er);
 	}
 	
 	return 0;
