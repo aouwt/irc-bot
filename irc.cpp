@@ -189,8 +189,8 @@ retry:
 	if (startswith (str, "PING :")) {
 		char ping [512];
 		char pong [512];
-		
-		if (sscanf (str, "PING%*[^ ]:%[^\r]\r\n", ping) == EOF)
+	
+		if (sscanf (str, "PING%*[^ ]:%[^\r]\r\n", ping) != 1)
 			return IRC_PACKETERR;
 		
 		if (snprintf (pong, IRC_MESSAGELEN, "PONG :%s\r\n", ping) == EOF)
@@ -213,7 +213,7 @@ retry:
 	else
 	if (str [0] == ':') { // privmsg
 		
-		if (sscanf (str, ":%9[^! ]%*[^ ]%*[ ]PRIVMSG%*[ ]%50[^ ]%*[ ]:%510[^\r]\r\n", msg -> who, msg -> where, msg -> what) == EOF)
+		if (sscanf (str, ":%9[^! ]%*[^ ]%*[ ]PRIVMSG%*[ ]%50[^ ]%*[ ]:%510[^\r]\r\n", msg -> who, msg -> where, msg -> what) != 3)
 			return IRC_PACKETERR;
 		
 		return IRC_MESSAGE;
