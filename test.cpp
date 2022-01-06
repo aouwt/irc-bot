@@ -11,14 +11,14 @@ int main () {
 	c.join_chan ("#b");
 
 	puts ("done");
-	IRC::Message h;
+	IRC::Message msg;
 	for (;;) {
-		int er = c.get_msg (&h);
-		//char thing [10];
-		//sprintf (thing, "%d", er);
-		//if (er != IRC_NOMESSAGE)
-		//	c.send_msg (thing, "#b");
-//		printf ("%i\n", er);
+		int e = c.get_msg (&msg);
+		if (e == IRC_MESSAGE)
+			c.send_msg (msg., msg.who);
+		else
+		if (e != IRC_NOMESSAGE)
+			printf ("err: %i\n", e);
 	}
 	
 	return 0;

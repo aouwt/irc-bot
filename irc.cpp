@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <errno.h>
 
 
 bool startswith (const char *str, const char *search) {
@@ -42,15 +43,21 @@ IRC::IRC (const char* domain, unsigned int port, const char* name) {
 		return;
 	}
 
-		if (fcntl (sockfd, F_SETFL, O_NONBLOCK)) {
+	if (fcntl (sockfd, F_SETFL, O_NONBLOCK)) {
 		err = IRC_GENERAL;
 		return;
 	}
 
 	((struct sockaddr_in*) addr -> ai_addr) -> sin_port = htons (port);
+retry:
 	if (connect (sockfd, addr -> ai_addr, addr -> ai_addrlen)) {
-		err = IRC_CANTCONNECT;
-		return;
+		switch (errno) {
+			case EINPROGRESS: case EALREADY:
+				goto retry;
+			default:
+				err = IRC_CANTCONNECT;
+				return;
+		}
 	}
 
 	freeaddrinfo (addr);
@@ -69,10 +76,11 @@ int IRC::_send (const char* what) {
 	int sent = 0; int erc;
 	int len = strlen (what);
 	do {
-		puts (what + sent);
 		erc = send (sockfd, what + sent, len - sent, 0);
 		if (erc > 0)
 			sent += erc;
+		else
+			return IRC_GENERAL;
 	} while (sent < len);
 	
 	return IRC_OK;
@@ -122,35 +130,44 @@ int IRC::join_chan (const char* ch) {
 }
 
 
-void IRC::_get (void) {
+int IRC::_get (void) {
 	char buf [IRC_BUFFERLEN];
 	ssize_t r = recv (sockfd, buf, sizeof (buf), 0);
-	if (r <= 0)
-		return;
-	buf [r + 1] = '\0';
+	
+	if (r == 0) return 0;
+	else
+	if (r < 0) {
+		if (errno == EWOULDBLOCK)
+			return 0;
+		else
+			return errno + 1000;
+	}
+	
+	buf [r] = '\0';
 	std::string s (buf);
 	CurBuf += s;
-	puts (CurBuf.c_str ());
+	return 0;
 }
 
 
 
 
 int IRC::_getcmd (char* msg) {
-	int where = 0;
+	size_t where = 0;
 	
-	_get ();
+	int e = _get ();
+	if (e)
+		return e;
 
-	if ((where = CurBuf.find ("\r\n")) == -1) {
-		msg[0] = '\0';
+	if ((where = CurBuf.find ("\r\n")) == std::string::npos)
 		return IRC_NOMESSAGE;
-	}
 
 	
 	const char *s = CurBuf.c_str ();
-	CurBuf.erase (0, where + 2);
 
-	if (sscanf (s, "%510[^\r]\r\n", msg) == EOF)
+	e = sscanf (s, "%510[^\r]\r\n", msg);
+	CurBuf.erase (0, where + 2);
+	if (e == EOF)
 		return IRC_PACKETERR;
 	
 	return IRC_MESSAGE;
@@ -168,25 +185,38 @@ retry:
 	if (erm != IRC_MESSAGE)
 		return erm;
 	
-	if (startswith (str, "PING :"))
-		return _send ("PONG\r\n");
-	else
+	
+	if (startswith (str, "PING :")) {
+		char ping [512];
+		char pong [512];
+		
+		if (sscanf (str, "PING%*[^ ]:%[^\r]\r\n", ping) == EOF)
+			return IRC_PACKETERR;
+		
+		if (snprintf (pong, IRC_MESSAGELEN, "PONG :%s\r\n", ping) == EOF)
+			return IRC_TOOLONG;
+		return _send (pong);
+	} else
+	
+	
 	if (startswith (str, "NOTICE AUTH :"))
 		goto retry;
+		
+		
+		
 	else
 	if (startswith (str, "ERROR :"))
 		goto retry;
-	else { // privmsg (note: i have no idea how this ensures that)
-	//	if (strchr (str, '\x01') != NULL) // note to self -- make this more me-ish
-	//		goto retry;
 		
-		//if (str [0] != ':')
-		//	return IRC_PACKETERR;
-		//if (strstr (str, "duck") != NULL)
-		//	send_msg ("quack", "#b");
-		puts (str);
-	}
-	
-	return IRC_MESSAGE;
-			
+		
+		
+	else
+	if (str [0] == ':') { // privmsg
+		
+		if (sscanf (str, ":%9[^! ]%*[^ ]%*[ ]PRIVMSG%*[ ]%50[^ ]%*[ ]:%510[^\r]\r\n", msg -> who, msg -> where, msg -> what) == EOF)
+			return IRC_PACKETERR;
+		
+		return IRC_MESSAGE;
+	}		
+	return IRC_NOMESSAGE;
 }

@@ -31,9 +31,9 @@ class IRC {
 		typedef char channel_t [IRC_CHANNELLEN + 2];
 		
 		typedef struct {
-			char msg [IRC_MESSAGELEN + 2];
-			//nick_t from;
-			//channel_t* channel;
+			char what [IRC_MESSAGELEN + 2];
+			nick_t who;
+			channel_t where;
 		} Message;
 		int err = 0;
 		
@@ -55,5 +55,5 @@ class IRC {
 		
 		int _getcmd (char* msg);
 		int _send (const char* what);
-		void _get (void);
+		int _get (void);
 };
