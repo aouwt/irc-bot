@@ -5,7 +5,7 @@
 
 
 IRC *Servers [16];
-size_t ServerCount = 0;
+size_t ServerCount = -1;
 
 
 char *lcase (char* str) {
@@ -80,6 +80,8 @@ namespace kit {
 			snprintf (msg, 512, "kitbot -- a useless irc bot. https://github.com/aouwt/irc-bot");
 		else
 			return;
+		
+		ctx -> conn -> send_msg (msg, ctx -> msg -> where);
 	}
 }
 
@@ -110,11 +112,47 @@ bool getmsg (kit::context *ctx, IRC::Message *msg) {
 
 
 
-int main () {
-	Servers [ServerCount] = new IRC ("ubq323.website", 6667, "kitbot");
-	Servers [ServerCount] -> set_nick ("kitbot");
-	Servers [ServerCount] -> join_chan ("#b");
-	ServerCount ++;
+int main (int argc, char *argv []) {
+	{
+		char *nick = NULL; //(char*) "kitbot";
+		
+		for (int a = 1; a != argc; a ++) {
+			if (argv [a] [0] != '-')
+				return -1;
+				
+			switch (argv [a] [1]) {
+				case 's':
+					Servers [++ ServerCount] = new IRC (&argv [a] [2], 6667, nick);
+					if (Servers [ServerCount] -> err) {
+						fputs ("Can't connect!\n", stderr);
+						return 1;
+					}
+					break;
+					
+				case 'n':
+					nick = &argv [a] [2];
+					break;
+				
+				case 'c':
+					Servers [ServerCount] -> join_chan (&argv [a] [2]);
+					break;
+					
+				case 'N':
+					Servers [ServerCount] -> set_nick (&argv [a] [2]);
+					break;
+				
+				case 'h':
+					printf ("Usage: %s [-nHOSTNAME] -sSERVER -cCHANNEL [-NNICK] ...\n", argv [0]);
+					return 0;
+			}
+		}
+	}
+	
+	if (++ ServerCount == 0) {
+		fputs ("No server!\n", stderr);
+		return -1;
+	}
+	
 
 	kit::context ctx; IRC::Message msg;
 	for (;;) {
@@ -135,6 +173,9 @@ int main () {
 			else
 			if (startswith (tok, "huh"))
 				kit::huh (&ctx);
+			else
+			if (startswith (tok, "who"))
+				kit::who (&ctx);
 exit:
 			free (lstr);
 		}

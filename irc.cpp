@@ -63,7 +63,7 @@ retry:
 	freeaddrinfo (addr);
 	
 	char msg [IRC_MESSAGELEN + 2];
-	if (snprintf (msg, IRC_MESSAGELEN, "USER %s %s %s %s\r\n", name, name, domain, name) == EOF) {
+	if (snprintf (msg, IRC_MESSAGELEN, "USER %s %s %s %s\r\nNICK %s\r\n", name, name, domain, name, name) == EOF) {
 		err = IRC_TOOLONG;
 		return;
 	}
@@ -73,7 +73,9 @@ retry:
 
 
 int IRC::_send (const char* what) {
-	//printf ("\n<%s", what);
+	#ifdef IRC_DEBUG
+		printf ("\n<%s", what);
+	#endif
 	int sent = 0; int erc;
 	int len = strlen (what);
 	do {
@@ -145,7 +147,9 @@ int IRC::_get (void) {
 	}
 	
 	buf [r] = '\0';
-	//printf ("\n>%s", buf);
+	#ifdef IRC_DEBUG
+		printf ("\n>%s", buf);
+	#endif
 	std::string s (buf);
 	CurBuf += s;
 	return 0;
