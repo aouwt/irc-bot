@@ -12,7 +12,7 @@
 #include <errno.h>
 
 
-bool startswith (const char *str, const char *search) {
+static bool startswith (const char *str, const char *search) {
 	for (size_t i = 0;; i ++) {
 		if (search [i] == '\0') return true;
 		if (search [i] != str [i]) return false;
@@ -73,6 +73,7 @@ retry:
 
 
 int IRC::_send (const char* what) {
+	//printf ("\n<%s", what);
 	int sent = 0; int erc;
 	int len = strlen (what);
 	do {
@@ -144,6 +145,7 @@ int IRC::_get (void) {
 	}
 	
 	buf [r] = '\0';
+	//printf ("\n>%s", buf);
 	std::string s (buf);
 	CurBuf += s;
 	return 0;
@@ -190,7 +192,7 @@ retry:
 		char ping [512];
 		char pong [512];
 	
-		if (sscanf (str, "PING%*[^ ]:%[^\r]\r\n", ping) != 1)
+		if (sscanf (str, "PING :%[^\r]\r\n", ping) != 1)
 			return IRC_PACKETERR;
 		
 		if (snprintf (pong, IRC_MESSAGELEN, "PONG :%s\r\n", ping) == EOF)
