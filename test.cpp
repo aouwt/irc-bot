@@ -4,6 +4,8 @@
 #include <stdio.h>
 
 
+#define LEN(arr) (sizeof (arr) / sizeof (arr [0]))
+
 IRC *Servers [16];
 size_t ServerCount = -1;
 
@@ -31,14 +33,22 @@ namespace kit {
 		IRC *conn;
 	} context;
 	
+	
+	
 	void ping (context *ctx) {
 		ctx -> conn -> send_msg ("kitpong", ctx -> msg -> where);
 	}
+	
+	
+	
 	
 	void help (context *ctx) {
 		ctx -> conn -> send_msg ("kitbot -- kit except a bot -- use `kithuh COMMAND` for more information on a command", ctx -> msg -> where);
 		ctx -> conn -> send_msg ("commands: kitping, kithelp, kithuh, kitwho", ctx -> msg -> where);
 	}
+	
+	
+	
 	
 	void huh (context *ctx) {
 		char _what [16];
@@ -68,6 +78,9 @@ namespace kit {
 		}
 	}
 	
+	
+	
+	
 	void who (context *ctx) {
 		char what [16]; char msg [512];
 		if (sscanf (ctx -> start + 3, "%*[ ]%16s", what) != 1)
@@ -83,6 +96,30 @@ namespace kit {
 		
 		ctx -> conn -> send_msg (msg, ctx -> msg -> where);
 	}
+	
+	
+	
+	void bruh (context *ctx) {
+		ctx -> conn -> send_msg ("bruh", ctx -> msg -> where);
+	}
+	
+	
+	
+	
+	void slap (context *ctx) {
+		char who [32]; char msg [512]; char act [512];
+		if (sscanf (ctx -> start + 4, "%*[ ]%32s", who) != 1)
+			return;
+		
+		#include "kitslap.cpp"
+		
+		snprintf (act, 512, items [rand () % (LEN (items) - 1)], who);
+		snprintf (msg, 512, "\01ACTION %s\x01", act);
+		ctx -> conn -> send_msg (msg, ctx -> msg -> where);
+	}
+		
+		
+		
 }
 
 
@@ -176,6 +213,12 @@ int main (int argc, char *argv []) {
 			else
 			if (startswith (tok, "who"))
 				kit::who (&ctx);
+			else
+			if (startswith (tok, "bruh"))
+				kit::bruh (&ctx);
+			else
+			if (startswith (tok, "slap"))
+				kit::slap (&ctx);
 exit:
 			free (lstr);
 		}
