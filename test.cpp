@@ -118,7 +118,10 @@ namespace kit {
 		ctx -> conn -> send_msg (msg, ctx -> msg -> where);
 	}
 		
-		
+	
+	void bot (context *ctx) {
+		ctx -> conn -> send_msg ("what do you want", ctx -> msg -> where);
+	}
 		
 }
 
@@ -219,6 +222,9 @@ int main (int argc, char *argv []) {
 			else
 			if (startswith (tok, "slap"))
 				kit::slap (&ctx);
+			else
+			if (startswith (tok, "bot"))
+				kit::bot (&ctx);
 exit:
 			free (lstr);
 		}

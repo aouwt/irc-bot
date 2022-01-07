@@ -80,7 +80,7 @@ int IRC::_send (const char* what) {
 	int len = strlen (what);
 	do {
 		erc = send (sockfd, what + sent, len - sent, 0);
-		if (erc > 0)
+		if (erc >= 0)
 			sent += erc;
 		else
 			return IRC_GENERAL;
