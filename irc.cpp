@@ -119,6 +119,18 @@ int IRC::send_msg (const char* what, const channel_t where) {
 }
 
 
+int IRC::send_action (const char* what, const channel_t where) {
+	if (strlen (where) > IRC_CHANNELLEN)
+		return IRC_CHANTOOLONG;
+
+	char msg [IRC_MESSAGELEN + 2];
+	if (snprintf (msg, IRC_MESSAGELEN, "PRIVMSG %s :\01ACTION %s\01\r\n", where, what) == EOF)
+		return IRC_TOOLONG;
+
+	return _send (msg);
+}
+
+
 
 
 int IRC::join_chan (const char* ch) {

@@ -43,6 +43,7 @@ class IRC {
 		
 		int get_msg (Message* msg);
 		int send_msg (const char* what, const channel_t where);
+		int send_action (const char* what, const channel_t where);
 		
 		int join_chan (const char* ch);
 		int set_nick (const char* nick);
